@@ -50,7 +50,6 @@ export default function RelayCard({ index, state = false, disabled = false, onTo
           </div>
           <div>
             <h4 className="text-sm font-bold text-slate-700">{RELAY_LABELS[index]}</h4>
-            <span className="text-[11px] font-mono text-slate-400">GPIO {GPIO_PINS[index]}</span>
           </div>
         </div>
 
@@ -62,11 +61,6 @@ export default function RelayCard({ index, state = false, disabled = false, onTo
         }`}>
           {state ? 'ON' : 'OFF'}
         </span>
-      </div>
-
-      {/* Current info */}
-      <div className={`mt-3 text-xs font-medium ${state ? 'text-slate-500' : 'text-slate-400'}`}>
-        Load: <span className="font-mono font-semibold">{RELAY_CURRENTS[index]} A</span>
       </div>
 
       {/* Divider + toggle row */}

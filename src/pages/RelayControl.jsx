@@ -3,7 +3,7 @@
  */
 import { FlipHorizontal2, Zap, Power } from 'lucide-react';
 import SectionBox from '../components/shared/SectionBox';
-import { RELAY_LABELS, GPIO_PINS, RELAY_CURRENTS } from '../hooks/useMqtt';
+import { RELAY_LABELS } from '../hooks/useMqtt';
 
 const PALETTE = [
   { on: '#6366f1', bg: '#eef2ff', badge: '#6366f1' },
@@ -12,15 +12,7 @@ const PALETTE = [
   { on: '#f59e0b', bg: '#fef3c7', badge: '#f59e0b' },
 ];
 
-function fmtTime(s) {
-  if (!s) return '0s';
-  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
-  return h ? `${h}h ${m}m` : m ? `${m}m ${sec}s` : `${sec}s`;
-}
-
 export default function RelayControl({ state, isOnline, toggleRelayManual }) {
-  const v = parseFloat(state.voltage) || 12;
-
   return (
     <div className="space-y-5 fade-in">
       <SectionBox icon={FlipHorizontal2} title="Relay Control"
@@ -28,7 +20,6 @@ export default function RelayControl({ state, isOnline, toggleRelayManual }) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {state.relays.map((on, i) => {
             const pal = PALETTE[i];
-            const pw  = on ? (RELAY_CURRENTS[i] * v).toFixed(2) : '0.00';
             return (
               <div key={i} className="rounded-xl border transition-all duration-300"
                 style={{ borderColor: on ? pal.on + '50' : '#e2e8f0', background: on ? pal.bg : '#fafafa' }}>
@@ -42,7 +33,6 @@ export default function RelayControl({ state, isOnline, toggleRelayManual }) {
                     </div>
                     <div>
                       <p className="text-[13px] font-bold text-slate-700">{RELAY_LABELS[i]}</p>
-                      <p className="text-[10px] font-mono text-slate-400">GPIO {GPIO_PINS[i]}</p>
                     </div>
                   </div>
                   <span className="rounded-full px-2.5 py-0.5 text-[11px] font-black border"
@@ -51,25 +41,8 @@ export default function RelayControl({ state, isOnline, toggleRelayManual }) {
                   </span>
                 </div>
 
-                {/* Stats */}
-                <div className="px-4 py-3 space-y-2 text-[12px]">
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Load current</span>
-                    <span className="font-mono font-semibold text-slate-700">{RELAY_CURRENTS[i]} A</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Active power</span>
-                    <span className="font-mono font-semibold" style={{ color: on ? pal.on : '#94a3b8' }}>{pw} W</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-400">Session ON time</span>
-                    <span className="font-mono font-semibold text-slate-600">{fmtTime(state.relayOnTime[i])}</span>
-                  </div>
-                </div>
-
                 {/* Toggle */}
-                <div className="border-t px-4 py-3 flex items-center justify-between"
-                  style={{ borderColor: on ? pal.on + '20' : '#f1f5f9' }}>
+                <div className="px-4 py-3.5 flex items-center justify-between">
                   <span className="text-[11px] text-slate-400 font-medium">Control Switch</span>
                   <button type="button" role="switch" aria-checked={on}
                     onClick={() => toggleRelayManual(i, !on)}

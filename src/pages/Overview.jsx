@@ -1,12 +1,12 @@
 /**
  * pages/Overview.jsx — System summary & key metrics
  */
-import { Monitor, Power } from 'lucide-react';
+import { Monitor } from 'lucide-react';
 import KpiCard from '../components/shared/KpiCard';
 import SectionBox from '../components/shared/SectionBox';
-import { calcSoC, RELAY_LABELS, RELAY_CURRENTS } from '../hooks/useMqtt';
+import { calcSoC, RELAY_LABELS } from '../hooks/useMqtt';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 
 function statusLabel(v, low = 10.5, warn = 11.5) {
@@ -24,11 +24,6 @@ export default function Overview({ state, isOnline, toggleRelayManual }) {
 
   const vStatus = isOnline ? statusLabel(state.voltage) : null;
   const cStatus = isOnline ? (c >= state.currentLimit ? { txt: '● High', color: '#ef4444' } : { txt: '● Normal', color: '#10b981' }) : null;
-
-  const relayRows = state.relays.map((on, i) => ({
-    name: `CH${i+1}`, power: on ? +(RELAY_CURRENTS[i] * (isNaN(v) ? 12 : v)).toFixed(2) : 0,
-    color: ['#6366f1','#10b981','#8b5cf6','#f59e0b'][i],
-  }));
 
   return (
     <div className="space-y-5 fade-in">
@@ -97,26 +92,35 @@ export default function Overview({ state, isOnline, toggleRelayManual }) {
           </div>
         </div>
 
-        {/* Relay power bar */}
+        {/* Current trend mini chart */}
         <div className="rounded-xl border border-slate-200 bg-white p-5">
-          <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase mb-3">Active Power per Relay</p>
+          <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase mb-3">Current Trend</p>
           <div className="h-40">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={relayRows} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f8fafc" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 9, fill: '#94a3b8', fontFamily: 'monospace' }} tickLine={false} axisLine={false} tickFormatter={v => `${v}W`} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }} tickLine={false} axisLine={false} width={32} />
-                <Tooltip formatter={v => [`${v.toFixed(2)} W`, 'Power']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 11 }} />
-                <Bar dataKey="power" radius={[0, 5, 5, 0]} maxBarSize={20}>
-                  {relayRows.map((r, i) => <Cell key={i} fill={state.relays[i] ? r.color : '#e2e8f0'} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            {state.history.length < 2
+              ? <div className="flex h-full items-center justify-center text-xs text-slate-300 animate-pulse">Waiting for data…</div>
+              : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={state.history} margin={{ top: 4, right: 2, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="ov-c" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.2} />
+                        <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.01} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f8fafc" vertical={false} />
+                    <XAxis dataKey="t" tick={{ fontSize: 8, fill: '#cbd5e1', fontFamily: 'monospace' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                    <YAxis domain={[0, 'auto']} tick={{ fontSize: 8, fill: '#cbd5e1', fontFamily: 'monospace' }} tickLine={false} axisLine={false} width={40} tickFormatter={v => `${v}A`} />
+                    <Tooltip formatter={v => [`${Number(v)?.toFixed(2)} A`, 'Current']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 11 }} />
+                    <Area type="monotone" dataKey="current" stroke="#f59e0b" strokeWidth={2} fill="url(#ov-c)" dot={false} isAnimationActive={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )
+            }
           </div>
         </div>
       </div>
 
-      {/* Relay status — interactive toggle cards */}
+      {/* Relay status — interactive toggle cards (4 channels) */}
       <div className="rounded-xl border border-slate-200 bg-white p-5">
         <div className="flex items-center justify-between mb-3">
           <p className="text-[11px] font-bold tracking-widest text-slate-400 uppercase">Relay Status</p>
@@ -124,7 +128,12 @@ export default function Overview({ state, isOnline, toggleRelayManual }) {
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {state.relays.map((on, i) => {
-            const COLORS = [['#6366f1','#eef2ff'],['#10b981','#d1fae5'],['#8b5cf6','#ede9fe'],['#f59e0b','#fef3c7']];
+            const COLORS = [
+              ['#6366f1','#eef2ff'],
+              ['#10b981','#d1fae5'],
+              ['#8b5cf6','#ede9fe'],
+              ['#f59e0b','#fef3c7']
+            ];
             const [c, bg] = COLORS[i];
             return (
               <button
@@ -144,7 +153,6 @@ export default function Overview({ state, isOnline, toggleRelayManual }) {
                 </span>
                 <div className="flex-1 min-w-0">
                   <p className="text-[12px] font-bold text-slate-700 truncate">{RELAY_LABELS[i]}</p>
-                  <p className="text-[10px] font-mono text-slate-400">{RELAY_CURRENTS[i]} A</p>
                 </div>
                 {/* Toggle switch */}
                 <div className="flex flex-col items-end gap-1">
